@@ -1,0 +1,13 @@
+{
+    "mod_id": "kerbal_part_manager",
+    "author": "ShadowDev#6969",
+    "name": "Kerbal Part Manager",
+    "description": "Fix the part manager",
+    "source": "L",
+    "version": "0.0.1",
+    "dependencies": [],
+    "ksp2_version": {
+        "min": "0.1.0",
+        "max": "0.2.0"
+    }
+}
