@@ -12,6 +12,11 @@ using KSP;
 using KSP.Api.CoreTypes;
 using System.Runtime.Serialization.Formatters.Binary;
 using KSP.OAB;
+using KSP.Modules;
+using static KSP.Modules.Data_ReactionWheel;
+using Shapes;
+using Mono.Cecil;
+using KSP.Sim.ResourceSystem;
 
 namespace KerbalPartManager;
 
@@ -19,7 +24,7 @@ namespace KerbalPartManager;
 [MainMod]
 public class KerbalPartManagerMod : Mod
 {
-    private int windowWidth = 700;
+    private int windowWidth = 500;
     private int windowHeight = 700;
     private Rect windowRectConfig;
     private Rect windowRectPartMenu;
@@ -32,8 +37,9 @@ public class KerbalPartManagerMod : Mod
     private static bool basicmode = true;
     private static bool pinned = false;
     private static string SetWindowWidthStr = "700";
-    private static IObjectAssemblyPart assemblyPart;
-
+    private static IObjectAssemblyPart assemblyPart = null;
+    private static Dictionary<string,string> SelectedRecources = new Dictionary<string,string>();
+    private static bool justClicked = false;
     public override void OnInitialized()
     {
         ResourceManager.TryGetAsset($"space_warp/swconsoleui/swconsoleUI/spacewarpConsole.guiskin", out _spaceWarpUISkin);
@@ -45,7 +51,7 @@ public class KerbalPartManagerMod : Mod
     }
     void Awake()
     {
-        GameManager.Instance.Game.PartsManager = null;
+        
         windowRectConfig = new Rect((Screen.width * 0.85f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
         windowRectPartMenu = new Rect((Screen.width * 0.85f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
     }
@@ -53,9 +59,9 @@ public class KerbalPartManagerMod : Mod
     {
         if (Input.GetMouseButtonDown(1))
         {
-            GameManager.Instance.Game.PartsManager = null;
+            justClicked = true;
+            //GameManager.Instance.Game.PartsManager = null;
             GameStateConfiguration gameStateConfiguration = GameManager.Instance.Game.GlobalGameState.GetGameState();
-            
             if (gameStateConfiguration.IsFlightMode)
             {
                 Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -65,9 +71,8 @@ public class KerbalPartManagerMod : Mod
                     SimulationObjectView nullobj;
                     if (hit.rigidbody.gameObject.TryGetComponent<SimulationObjectView>(out nullobj))
                     {
-                        GameManager.Instance.Game.PartsManager = null;
+                        //GameManager.Instance.Game.PartsManager = null;
                         SelectedObject = hit.rigidbody.gameObject;
-
                         showPartMenuUI = true;
                     }
                     else if (pinned == false)
@@ -86,7 +91,7 @@ public class KerbalPartManagerMod : Mod
                 var tempobj = GameObject.Find("OAB(Clone)");
                 if(tempobj.GetComponent<ObjectAssemblyBuilderInstance>().ActivePartTracker.PartsUnderCursor.Length > 0)
                 {
-                    assemblyPart = tempobj.GetComponent<ObjectAssemblyBuilderInstance>().ActivePartTracker.PartsUnderCursor.First().Key;
+                    assemblyPart = tempobj.GetComponent<ObjectAssemblyBuilderInstance>().ActivePartTracker.PartsUnderCursor.Last().Key;
                     SelectedObject = GameObject.Find("OAB(Clone)");
                     showPartMenuUI = true;
                 }
@@ -95,10 +100,7 @@ public class KerbalPartManagerMod : Mod
                     showPartMenuUI = false;
                 }
             }
-            else if (pinned == false)
-            {
-                showPartMenuUI = false;
-            }
+            
 
         }
     }
@@ -123,7 +125,7 @@ public class KerbalPartManagerMod : Mod
         }
         if (showPartMenuUI)
         {
-            GameManager.Instance.Game.PartsManager = null;
+            //GameManager.Instance.Game.PartsManager = null;
             windowRectPartMenu = GUILayout.Window(
                 GUIUtility.GetControlID(FocusType.Passive),
                 windowRectPartMenu,
@@ -153,23 +155,9 @@ public class KerbalPartManagerMod : Mod
     }
     private void FillPartWindow(int windowID)
     {
+        int x = 0;
         GameStateConfiguration gameStateConfiguration = GameManager.Instance.Game.GlobalGameState.GetGameState();
-        
-        string[] menuOptions = { "Basic", "Expanded" };
-        selectedItem = GUILayout.SelectionGrid(selectedItem, menuOptions, 2);
         boxStyle = GUI.skin.GetStyle("Box");
-        switch (selectedItem)
-        {
-            case 0:
-                basicmode = true;
-                break;
-            case 1:
-                basicmode = false;
-                break;
-            default:
-                basicmode = true;
-                break;
-        }
         GUILayout.BeginVertical();
         if (GUI.Button(new Rect(windowWidth - 23, 6, 18, 18), "<b>x</b>", new GUIStyle(GUI.skin.button) { fontSize = 10, }))
         {
@@ -190,10 +178,10 @@ public class KerbalPartManagerMod : Mod
             }
         }
         DictionaryValueList<Type, IPartModule> Modules = new DictionaryValueList<Type, IPartModule>();
+        
         if (gameStateConfiguration.IsFlightMode)
         {
             GUILayout.Label($"<b>Selected Part: {SelectedObject.GetComponent<SimulationObjectView>().Part.GetDisplayName()}</b>");
-            
             Modules = SelectedObject.GetComponent<SimulationObjectView>().Part.Modules;
         }
         if (gameStateConfiguration.IsObjectAssembly)
@@ -201,71 +189,153 @@ public class KerbalPartManagerMod : Mod
             GUILayout.Label($"<b>Selected Part: {assemblyPart.Name}</b>");
             Modules = assemblyPart.Modules;
         }
-        
+        int ModuleID = 0;
         foreach (PartBehaviourModule module in Modules.Values){
             try
             {
-                module.ModuleActions.ForEach(action => {
-                    bool isManualSet = false;
-                    List<string> ManualSet = new List<string> { "Control From Here" };
-                    
-                    if (ManualSet.Contains(action.DisplayName)) {
-                        isManualSet = true;
-                    }
-                    Debug.Log($"|{action.ActionType}|{action.ActionState}|{action.DisplayName}");
-                    switch (action.ActionType)
-                    {
+                
+
+                switch (module.GetModuleDisplayName())
+                {
+                    case "Command Module":
+                        Module_Command module_Command = (Module_Command)Modules.Values.ToArray()[ModuleID];
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label($"> Control Orientation", GUILayout.Width(windowWidth / 2));
+                        if (GUILayout.Button("Default"))
+                        {
+                            module_Command.SetControlPoint("Default", true);
+                        }
+                        if (GUILayout.Button("Reversed"))
+                        {
+                            module_Command.SetControlPoint("Reversed", true);
+                        }
+                        GUILayout.EndHorizontal();
+                        break;
+                    case "Lit Part":
+                        //none
+                        break;
+                    case "Reaction Wheel":
+                        Data_ReactionWheel data_ReactionWheel = new Data_ReactionWheel();
+                        module.DataModules.TryGetByType<Data_ReactionWheel>(out data_ReactionWheel);
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label($"> Torque Mode", GUILayout.Width(windowWidth / 2));
+                        if (GUILayout.Button("All"))
+                        {
+                            
+                            data_ReactionWheel.WheelActuatorMode = new ModuleProperty<Data_ReactionWheel.ActuatorModes>(Data_ReactionWheel.ActuatorModes.All);
+                        }
+                        if (GUILayout.Button("ManualOnly"))
+                        {
+
+                            data_ReactionWheel.WheelActuatorMode = new ModuleProperty<Data_ReactionWheel.ActuatorModes>(Data_ReactionWheel.ActuatorModes.ManualOnly);
+                        }
+                        if (GUILayout.Button("SASOnly"))
+                        {
+
+                            data_ReactionWheel.WheelActuatorMode = new ModuleProperty<Data_ReactionWheel.ActuatorModes>(Data_ReactionWheel.ActuatorModes.SASOnly);
+                        }
+                        GUILayout.EndHorizontal();
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label($"Wheel Authority ({(float)data_ReactionWheel.WheelAuthority.GetObject()})", GUILayout.Width(windowWidth / 2));
+                        data_ReactionWheel.WheelAuthority = new ModuleProperty<float>(GUILayout.HorizontalSlider((float)data_ReactionWheel.WheelAuthority.GetObject(), 0.0f,1.0f));
+                        GUILayout.EndHorizontal();
+                        break;
+                    case "RCS Thruster":
+                        Data_RCS data_RCS = new Data_RCS();
+                        module.DataModules.TryGetByType<Data_RCS>(out data_RCS);
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label($"Thrust Limiter ({(float)data_RCS.thrustPercentage.GetObject()})", GUILayout.Width(windowWidth / 2));
+                        data_RCS.thrustPercentage = new ModuleProperty<float>(GUILayout.HorizontalSlider((float)data_RCS.thrustPercentage.GetObject(), 0.0f, 100.0f));
+                        GUILayout.EndHorizontal();
+                        break;
+                    case "Engine Gimbal":
+                        Data_Gimbal data_Gimbal = new Data_Gimbal();
+                        module.DataModules.TryGetByType<Data_Gimbal>(out data_Gimbal);
+                        break;
+                    case "Engine":
+                        Data_Engine data_Engine = new Data_Engine();
+                        module.DataModules.TryGetByType<Data_Engine>(out data_Engine);
                         
-                        case KSPActionType.Toggle:
+                        if (data_Engine.IndependentThrottle.GetValue())
+                        {
+                            GUILayout.BeginHorizontal();
+                            GUILayout.Label($"Thrust Limiter ({(float)data_Engine.IndependentThrottlePercentage.GetObject()})", GUILayout.Width(windowWidth / 2));
+                            data_Engine.IndependentThrottlePercentage = new ModuleProperty<float>(GUILayout.HorizontalSlider((float)data_Engine.IndependentThrottlePercentage.GetObject(), 0.0f, 100.0f));
+                            GUILayout.EndHorizontal();
+                        }
+                        break;
+                    case "Solar Panel":
+                        Data_Deployable data_SolarPanel = new Data_Deployable();
+                        module.DataModules.TryGetByType<Data_Deployable>(out data_SolarPanel);
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label($"Extended ({data_SolarPanel.toggleExtend.GetValue()})", GUILayout.Width(windowWidth / 2));
+                        if (GUILayout.Button("Toggle"))
+                        {
+                            data_SolarPanel.toggleExtend = new ModuleProperty<bool>(!data_SolarPanel.toggleExtend.GetValue());
+                        }
+                        GUILayout.EndHorizontal();
+                        break;
+                    case "Module_WheelBase":
+                        Data_WheelBase data_WheelBase = new Data_WheelBase();
+                        module.DataModules.TryGetByType<Data_WheelBase>(out data_WheelBase);
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label($"Auto Friction ({data_WheelBase.AutoFriction.GetValue()})", GUILayout.Width(windowWidth / 2));
+                        if (GUILayout.Button("Toggle"))
+                        {
+                            data_WheelBase.AutoFriction = new ModuleProperty<bool>(!data_WheelBase.AutoFriction.GetValue());
+                        }
+                        GUILayout.EndHorizontal();
+                        if (!data_WheelBase.AutoFriction.GetValue())
+                        {
+                            GUILayout.BeginHorizontal();
+                            GUILayout.Label($"Friction ({(float)data_WheelBase.FrictionMultiplier.GetObject()})", GUILayout.Width(windowWidth / 2));
+                            data_WheelBase.FrictionMultiplier = new ModuleProperty<float>(GUILayout.HorizontalSlider((float)data_WheelBase.FrictionMultiplier.GetObject(), 0.0f, 10.0f));
+                            GUILayout.EndHorizontal();
+                        }
+                        
+                        break;
+                    case "Module_WheelMotor":
+                        Data_WheelMotor data_WheelMotor = new Data_WheelMotor();
+                        module.DataModules.TryGetByType<Data_WheelMotor>(out data_WheelMotor);
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label($"Auto Traction ({data_WheelMotor.autoTorque.GetValue()})", GUILayout.Width(windowWidth / 2));
+                        if (GUILayout.Button("Toggle"))
+                        {
+                            data_WheelMotor.autoTorque = new ModuleProperty<bool>(!data_WheelMotor.autoTorque.GetValue());
+                        }
+                        GUILayout.EndHorizontal();
+                        if (!data_WheelMotor.autoTorque.GetValue())
+                        {
+                            GUILayout.BeginHorizontal();
+                            GUILayout.Label($"Traction ({(float)data_WheelMotor.tractionControlScale.GetObject()})", GUILayout.Width(windowWidth / 2));
+                            data_WheelMotor.tractionControlScale = new ModuleProperty<float>(GUILayout.HorizontalSlider((float)data_WheelMotor.tractionControlScale.GetObject(), 0.0f, 10.0f));
+                            GUILayout.EndHorizontal();
+                        }
+
+                        break;
+                    case "Module_DockingNode":
+                        Data_DockingNode data_DockingNode = new Data_DockingNode();
+                        module.DataModules.TryGetByType<Data_DockingNode>(out data_DockingNode);
+                        break;
+                    default: break;
+                }
+                module.ModuleActions.ForEach(action => {
+                    Debug.Log($"|{module.GetModuleDisplayName()}|{action.ActionType}|{action.ActionState}|{action.DisplayName}");
+                    List<string> disabledTypes = new List<string> { "Module_WheelBase", "Module_WheelMotor" };
+                    if (action.ActionType == KSPActionType.Toggle)
+                    {
+                        if (disabledTypes.Contains(module.GetModuleDisplayName())) { } else
+                        {
                             GUILayout.BeginHorizontal();
                             GUILayout.Label($"{action.DisplayName} ({action.ActionState})", GUILayout.Width(windowWidth / 2));
                             if (GUILayout.Button("Toggle"))
                             {
-                                Debug.Log($"action.ActionState {action.ActionState} set to ${action.ActionState}");
-                                
                                 action.ActionState = !action.ActionState;
                                 action.StateProperty.SetValue(action.ActionState);
-                                Debug.Log($"{action.ActionState}");
                             }
-                                
                             GUILayout.EndHorizontal();
-                            break;
-                        case KSPActionType.Event:
-                            if(basicmode == false && isManualSet == false)
-                            {
-                                GUILayout.BeginHorizontal();
-                                GUILayout.Label($"{action.DisplayName}", GUILayout.Width(windowWidth / 2));
-                                if (GUILayout.Button("Set"))
-                                {
-                                    Debug.Log($"action.ActionState {action.ActionState} set to ${action.ActionState}");
-                                    action.ActionState = !action.ActionState;
-                                    action.StateProperty.SetValue(action.ActionState);
-                                    Debug.Log($"{action.ActionState}");
-                                }
-                                GUILayout.EndHorizontal();
-                            }
-                            else if(isManualSet == true)
-                            {
-                                switch (action.DisplayName)
-                                {
-                                    case "Control From Here":
-                                        GUILayout.BeginHorizontal();
-                                        GUILayout.Label($"{action.DisplayName}", GUILayout.Width(windowWidth / 2));
-                                        if (GUILayout.Button("Set"))
-                                        {
-                                            module.part.SimObjectComponent.SetAsVesselControl();
-                                        }
-                                        GUILayout.EndHorizontal();
-                                        break;
-                                    default:
-                                        break;
-                                }
-                                
-                            }
-                            else {
-                                
-                            }
-                            break;
+                        }
+                        
                     }
                 });
             }
@@ -274,8 +344,67 @@ public class KerbalPartManagerMod : Mod
                 Debug.LogException(e);
             }
         }
+        try
+        {
+            if (gameStateConfiguration.IsFlightMode)
+            {
+                SelectedObject.GetComponent<SimulationObjectView>().Part.Model.PartResourceContainer.GetAllResourcesContainedData().ForEach(resource =>
+                {
+
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label($"{GameManager.Instance.Game.ResourceDefinitionDatabase.GetDefinitionData(resource.ResourceID).DisplayName}", GUILayout.Width(windowWidth / 2));
+                    GUILayout.Label($"Stored {resource.StoredUnits} | Max {resource.CapacityUnits}", GUILayout.Width(windowWidth / 2));
+                    GUILayout.EndHorizontal();
+
+
+                });
+            }
+            else
+            {
+                if (justClicked)
+                {
+                    SelectedRecources = new Dictionary<string, string>();
+                }
+                assemblyPart.Containers.ForEach(resourceCD =>
+                {
+                    resourceCD.ForEach(resourceID =>
+                    {
+                        var resource = resourceCD.GetResourceContainedData(resourceID);
+
+                        if (justClicked)
+                        {
+                            SelectedRecources.Add(GameManager.Instance.Game.ResourceDefinitionDatabase.GetDefinitionData(resource.ResourceID).DisplayName, $"{resource.StoredUnits}");
+                        }
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label($"{GameManager.Instance.Game.ResourceDefinitionDatabase.GetDefinitionData(resource.ResourceID).DisplayName}", GUILayout.Width(windowWidth / 3));
+                        GUILayout.Label($"Stored {SelectedRecources[GameManager.Instance.Game.ResourceDefinitionDatabase.GetDefinitionData(resource.ResourceID).DisplayName]} | Max {resource.CapacityUnits}", GUILayout.Width(windowWidth / 2));
+                        if (GUILayout.Button("Set"))
+                        {
+
+                            resourceCD.SetResourceStoredUnits(resourceID, double.Parse(SelectedRecources[GameManager.Instance.Game.ResourceDefinitionDatabase.GetDefinitionData(resource.ResourceID).DisplayName]));
+
+                        }
+                        GUILayout.EndHorizontal();
+
+                        SelectedRecources[GameManager.Instance.Game.ResourceDefinitionDatabase.GetDefinitionData(resource.ResourceID).DisplayName] = $"{GUILayout.HorizontalSlider(float.Parse(SelectedRecources[GameManager.Instance.Game.ResourceDefinitionDatabase.GetDefinitionData(resource.ResourceID).DisplayName].ToString()), 0.0f, (float)resource.CapacityUnits)}";
+
+
+                    });
+
+
+
+                });
+
+            }
+        }
+
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+        }
 
         GUILayout.EndVertical();
         GUI.DragWindow(new Rect(0, 0, windowWidth,700));
+        justClicked = false;
     }
 }
