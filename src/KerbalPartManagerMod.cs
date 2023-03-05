@@ -2,27 +2,22 @@
 using KSP.Game;
 using SpaceWarp.API.Mods;
 using Screen = UnityEngine.Screen;
-using SpaceWarp.API.AssetBundles;
-using SpaceWarp.API;
 using KSP.UI.Binding;
 using KSP.Sim.impl;
 using KSP.Sim;
 using KSP.Sim.Definitions;
-using KSP;
-using KSP.Api.CoreTypes;
-using System.Runtime.Serialization.Formatters.Binary;
 using KSP.OAB;
 using KSP.Modules;
-using static KSP.Modules.Data_ReactionWheel;
 using Shapes;
-using Mono.Cecil;
-using KSP.Sim.ResourceSystem;
+using SpaceWarp.API.Assets;
+using SpaceWarp;
+using BepInEx;
+using SpaceWarp.API.UI.Appbar;
 
 namespace KerbalPartManager;
-
-
-[MainMod]
-public class KerbalPartManagerMod : Mod
+[BepInPlugin("com.shadowdev.partsmanager", "Part Manager", "0.3.1")]
+[BepInDependency(SpaceWarpPlugin.ModGuid, SpaceWarpPlugin.ModVer)]
+public class KerbalPartManagerMod : BaseSpaceWarpPlugin
 {
     private int windowWidth = 500;
     private int windowHeight = 700;
@@ -40,14 +35,13 @@ public class KerbalPartManagerMod : Mod
     private static IObjectAssemblyPart assemblyPart = null;
     private static Dictionary<string,string> SelectedRecources = new Dictionary<string,string>();
     private static bool justClicked = false;
+    public static bool IsDev = false;
     public override void OnInitialized()
     {
-        ResourceManager.TryGetAsset($"space_warp/swconsoleui/swconsoleUI/spacewarpConsole.guiskin", out _spaceWarpUISkin);
-        SpaceWarpManager.RegisterAppButton(
-            "Parts Menu Config",
+        Appbar.RegisterAppButton(
+           "Parts Menu Config",
             "BTN-PMC",
-            SpaceWarpManager.LoadIcon(), ToggleButton);
-        Logger.Info($"{Info.name} OnInitialized()");
+            AssetManager.GetAsset<Texture2D>($"{SpaceWarpMetadata.ModID}/images/icon.png"), ToggleButton);
     }
     void Awake()
     {
@@ -60,7 +54,11 @@ public class KerbalPartManagerMod : Mod
         if (Input.GetMouseButtonDown(1))
         {
             justClicked = true;
-            //GameManager.Instance.Game.PartsManager = null;
+            if (!IsDev)
+            {
+                GameManager.Instance.Game.PartsManager = null;
+            }
+            
             GameStateConfiguration gameStateConfiguration = GameManager.Instance.Game.GlobalGameState.GetGameState();
             if (gameStateConfiguration.IsFlightMode)
             {
@@ -71,7 +69,6 @@ public class KerbalPartManagerMod : Mod
                     SimulationObjectView nullobj;
                     if (hit.rigidbody.gameObject.TryGetComponent<SimulationObjectView>(out nullobj))
                     {
-                        //GameManager.Instance.Game.PartsManager = null;
                         SelectedObject = hit.rigidbody.gameObject;
                         showPartMenuUI = true;
                     }
@@ -112,7 +109,7 @@ public class KerbalPartManagerMod : Mod
     }
     void OnGUI()
     {
-        GUI.skin = _spaceWarpUISkin;
+        GUI.skin = SpaceWarp.API.UI.Skins.ConsoleSkin;
         if (showConfigUI)
         {
             windowRectConfig = GUILayout.Window(
@@ -125,7 +122,10 @@ public class KerbalPartManagerMod : Mod
         }
         if (showPartMenuUI)
         {
-            //GameManager.Instance.Game.PartsManager = null;
+            if (!IsDev)
+            {
+                GameManager.Instance.Game.PartsManager = null;
+            }
             windowRectPartMenu = GUILayout.Window(
                 GUIUtility.GetControlID(FocusType.Passive),
                 windowRectPartMenu,
@@ -255,7 +255,17 @@ public class KerbalPartManagerMod : Mod
                     case "Engine":
                         Data_Engine data_Engine = new Data_Engine();
                         module.DataModules.TryGetByType<Data_Engine>(out data_Engine);
-                        
+                        Module_Engine module_Engine = (Module_Engine)module;
+                        Debug.Log($"EngineModeString {data_Engine.EngineModeString} {data_Engine.currentEngineModeIndex}");
+                        if(data_Engine.engineModes.Length > 1) {
+                            GUILayout.BeginHorizontal();
+                            GUILayout.Label($"Engine Mode ({data_Engine.EngineModeString.GetValue()})", GUILayout.Width(windowWidth / 1.5f));
+                            if (GUILayout.Button("Change"))
+                            {
+                                module_Engine.ChangeEngineMode();
+                            }
+                            GUILayout.EndHorizontal();
+                        }
                         if (data_Engine.IndependentThrottle.GetValue())
                         {
                             GUILayout.BeginHorizontal();
@@ -316,11 +326,32 @@ public class KerbalPartManagerMod : Mod
                     case "Module_DockingNode":
                         Data_DockingNode data_DockingNode = new Data_DockingNode();
                         module.DataModules.TryGetByType<Data_DockingNode>(out data_DockingNode);
+                        if(data_DockingNode.CurrentState == Data_DockingNode.DockingState.Docked)
+                        {
+                            if (GUILayout.Button("Undock"))
+                            {
+                                Module_DockingNode.UndockModule(data_DockingNode.DockedPartId.Guid.ToString());
+                            }
+                                
+                        }
+                        break;
+                    case "Fairing":
+                        Data_Fairing data_Fairing = new Data_Fairing();
+                        module.DataModules.TryGetByType<Data_Fairing>(out data_Fairing);
+                        GUILayout.Label($"Length ({(float)data_Fairing.Length.GetObject()})", GUILayout.Width(windowWidth / 2));
+                        if (gameStateConfiguration.IsFlightMode) { } else
+                        {
+                            data_Fairing.Length.SetValue(GUILayout.HorizontalSlider((float)data_Fairing.Length.GetObject(), 0.0f, data_Fairing.LengthEditMaximum));
+                        }
+                            
                         break;
                     default: break;
                 }
                 module.ModuleActions.ForEach(action => {
-                    Debug.Log($"|{module.GetModuleDisplayName()}|{action.ActionType}|{action.ActionState}|{action.DisplayName}");
+                    if (IsDev)
+                    {
+                        Debug.Log($"|{module.GetModuleDisplayName()}|{action.ActionType}|{action.ActionState}|{action.DisplayName}");
+                    }
                     List<string> disabledTypes = new List<string> { "Module_WheelBase", "Module_WheelMotor" };
                     if (action.ActionType == KSPActionType.Toggle)
                     {
