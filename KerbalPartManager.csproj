@@ -10,9 +10,6 @@
 		<Reference Include="0Harmony">
 			<HintPath>..\external_dlls\0Harmony.dll</HintPath>
 		</Reference>
-		<Reference Include="0Harmony20">
-			<HintPath>..\external_dlls\0Harmony20.dll</HintPath>
-		</Reference>
 		<Reference Include="Accessibility">
 			<HintPath>..\external_dlls\Accessibility.dll</HintPath>
 		</Reference>
