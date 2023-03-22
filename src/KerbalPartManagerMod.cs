@@ -14,15 +14,10 @@ using SpaceWarp;
 using BepInEx;
 using SpaceWarp.API.UI.Appbar;
 using KSP.Messages;
-using Steamworks;
-using UnityEngine.InputSystem;
-using System.Reflection;
-using KSP.Input;
-using KSP.Logging;
 using HarmonyLib;
 
 namespace KerbalPartManager;
-[BepInPlugin("com.shadowdev.partsmanager", "Part Manager", "1.0.1")]
+[BepInPlugin("com.shadowdev.partsmanager", "Part Manager", "1.2.0")]
 [BepInDependency(SpaceWarpPlugin.ModGuid, SpaceWarpPlugin.ModVer)]
 public class KerbalPartManagerMod : BaseSpaceWarpPlugin
 {
@@ -42,7 +37,7 @@ public class KerbalPartManagerMod : BaseSpaceWarpPlugin
     private static IObjectAssemblyPart assemblyPart = null;
     private static Dictionary<string,string> SelectedRecources = new Dictionary<string,string>();
     private static bool justClicked = false;
-    public static bool IsDev = true;
+    public static bool IsDev = false;
     public static bool MouseButtonDownIS = false;
     public static PartUnderMouseChanged partUnderMouseChanged;
     public static PartManagerOpenedMessage partManagerOpenedMessage;
@@ -115,7 +110,7 @@ public class KerbalPartManagerMod : BaseSpaceWarpPlugin
                 if(tempobj.GetComponent<ObjectAssemblyBuilderInstance>().ActivePartTracker.PartsUnderCursor.Length > 0)
                 {
                     MouseButtonDownIS = true;
-                    assemblyPart = tempobj.GetComponent<ObjectAssemblyBuilderInstance>().ActivePartTracker.PartsUnderCursor.Last().Key;
+                    assemblyPart = tempobj.GetComponent<ObjectAssemblyBuilderInstance>().ActivePartTracker.ClosestPartToCursor.Key;
                     SelectedObject = GameObject.Find("OAB(Clone)");
                     showPartMenuUI = true;
                 }
@@ -128,10 +123,16 @@ public class KerbalPartManagerMod : BaseSpaceWarpPlugin
 
         }
     }
+    public void CreateNewOAB()
+    {
+        OABProvider OAB = new OABProvider(GameManager.Instance.Game);
+        
+    }
 
     private void PartChangedUnderMouse(MessageCenterMessage message)
     {
         partUnderMouseChanged = message as PartUnderMouseChanged;
+        Debug.Log("Part selected");
 
     }
     void ToggleButton(bool toggle)
@@ -207,7 +208,6 @@ public class KerbalPartManagerMod : BaseSpaceWarpPlugin
             }
         }
         DictionaryValueList<Type, IPartModule> Modules = new DictionaryValueList<Type, IPartModule>();
-        
         if (gameStateConfiguration.IsFlightMode)
         {
             GUILayout.Label($"<b>Selected Part: {SelectedObject.GetComponent<SimulationObjectView>().Part.GetDisplayName()}</b>");
@@ -285,24 +285,36 @@ public class KerbalPartManagerMod : BaseSpaceWarpPlugin
                         GUILayout.Label($"> Torque Mode", GUILayout.Width(windowWidth / 2));
                         if (GUILayout.Button("All"))
                         {
-                            
                             data_ReactionWheel.WheelActuatorMode.SetValue(Data_ReactionWheel.ActuatorModes.All);
                         }
                         if (GUILayout.Button("ManualOnly"))
                         {
-
                             data_ReactionWheel.WheelActuatorMode.SetValue(Data_ReactionWheel.ActuatorModes.ManualOnly);
                         }
                         if (GUILayout.Button("SASOnly"))
                         {
-
                             data_ReactionWheel.WheelActuatorMode.SetValue(Data_ReactionWheel.ActuatorModes.SASOnly);
                         }
                         GUILayout.EndHorizontal();
-                        GUILayout.BeginHorizontal();
-                        GUILayout.Label($"Wheel Authority ({(float)data_ReactionWheel.WheelAuthority.GetObject()})", GUILayout.Width(windowWidth / 2));
-                        data_ReactionWheel.WheelAuthority.SetValue(GUILayout.HorizontalSlider((float)data_ReactionWheel.WheelAuthority.GetObject(), 0.0f,1.0f));
-                        GUILayout.EndHorizontal();
+                        bool hoz = false;
+                        try
+                        {
+                            GUILayout.BeginHorizontal();
+                            hoz = true;
+                            GUILayout.Label($"Wheel Authority ({(float)data_ReactionWheel.WheelAuthority.GetObject()})", GUILayout.Width(windowWidth / 2));
+                            data_ReactionWheel.WheelAuthority.SetValue(GUILayout.HorizontalSlider((float)data_ReactionWheel.WheelAuthority.GetObject(), 0.0f, 1.0f));
+                            GUILayout.EndHorizontal();
+                        }
+                        catch
+                        {
+                            if (hoz)
+                            {
+                                GUILayout.EndHorizontal();
+                                hoz = false;
+                            }
+                            
+                        }
+                        
                         break;
                     case "RCS Thruster":
                         Data_RCS data_RCS = new Data_RCS();
@@ -392,24 +404,29 @@ public class KerbalPartManagerMod : BaseSpaceWarpPlugin
                         module.DataModules.TryGetByType<Data_DockingNode>(out data_DockingNode);
                         if(data_DockingNode.CurrentState == Data_DockingNode.DockingState.Docked)
                         {
+                            GUILayout.BeginHorizontal();
                             if (GUILayout.Button("Undock"))
                             {
                                 Module_DockingNode.UndockModule(data_DockingNode.DockedPartId.Guid.ToString());
                             }
-                                
+                            GUILayout.BeginHorizontal();
+
                         }
                         break;
                     case "Fairing":
                         Data_Fairing data_Fairing = new Data_Fairing();
                         module.DataModules.TryGetByType<Data_Fairing>(out data_Fairing);
+                        GUILayout.BeginHorizontal();
                         GUILayout.Label($"Length ({(float)data_Fairing.Length.GetObject()})", GUILayout.Width(windowWidth / 2));
                         if (gameStateConfiguration.IsFlightMode) { } else
                         {
                             data_Fairing.Length.SetValue(GUILayout.HorizontalSlider((float)data_Fairing.Length.GetObject(), 0.0f, data_Fairing.LengthEditMaximum));
                         }
+                        GUILayout.EndHorizontal();
                         break;
                     case "Module_ToggleCrossfeed":
-                        Module_ToggleCrossfeed module_ToggleCrossfeed = (Module_ToggleCrossfeed)Modules.Values.ToArray()[ModuleID];
+                        Module_ToggleCrossfeed module_ToggleCrossfeed = new Module_ToggleCrossfeed();
+                        module_ToggleCrossfeed = (Module_ToggleCrossfeed)module;
                         GUILayout.BeginHorizontal();
                         GUILayout.Label($"Toggle Crossfeed ({module.part.Model.FuelCrossfeed})", GUILayout.Width(windowWidth / 2));
                         if (GUILayout.Button("Toggle"))
@@ -422,8 +439,10 @@ public class KerbalPartManagerMod : BaseSpaceWarpPlugin
                     case "Decoupler":
                         Data_Decouple data_Decouple = new Data_Decouple();
                         module.DataModules.TryGetByType<Data_Decouple>(out data_Decouple);
+                        GUILayout.BeginHorizontal();
                         GUILayout.Label($"Ejection Impulse ({(float)data_Decouple.EjectionImpulse.GetObject()})", GUILayout.Width(windowWidth / 2));
                         data_Decouple.EjectionImpulse.SetValue(GUILayout.HorizontalSlider((float)data_Decouple.EjectionImpulse.GetObject(), 0.0f, 100f));
+                        GUILayout.EndHorizontal();
                         break;
                     default: break;
                 }
@@ -433,26 +452,41 @@ public class KerbalPartManagerMod : BaseSpaceWarpPlugin
                         Debug.Log($"|{module.GetModuleDisplayName()}|{action.ActionType}|{action.ActionState}|{action.DisplayName}");
                     }
                     List<string> disabledTypes = new List<string> { "Module_WheelBase", "Module_WheelMotor" };
-                    if (action.ActionType == KSPActionType.Toggle)
+                    bool hoz = false;
+                    try
                     {
-                        if (disabledTypes.Contains(module.GetModuleDisplayName())) { } else
+                        if (action.ActionType == KSPActionType.Toggle)
                         {
-                            GUILayout.BeginHorizontal();
-                            GUILayout.Label($"{action.DisplayName} ({action.StateProperty.GetValue()})", GUILayout.Width(windowWidth / 2));
-                            if (GUILayout.Button("Toggle"))
+                            if (disabledTypes.Contains(module.GetModuleDisplayName())) { }
+                            else
                             {
-                                action.ActionState = !action.ActionState;
-                                action.StateProperty.SetValue(!action.StateProperty.GetValue());
+                                GUILayout.BeginHorizontal();
+                                hoz = true;
+                                GUILayout.Label($"{action.DisplayName} ({action.StateProperty.GetValue()})", GUILayout.Width(windowWidth / 2));
+                                if (GUILayout.Button("Toggle"))
+                                {
+                                    action.ActionState = !action.ActionState;
+                                    action.StateProperty.SetValue(!action.StateProperty.GetValue());
+                                }
+                                GUILayout.EndHorizontal();
                             }
+
+                        }
+                    }
+                    catch(Exception e)
+                    {
+                        if (hoz)
+                        {
                             GUILayout.EndHorizontal();
                         }
-                        
+                        Debug.Log($"{e.Message}|{e.InnerException}|{e.Source}|{e.StackTrace}|1");
                     }
+
                 });
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                Debug.Log($"{e.Message}|{e.InnerException}|{e.Source}|{e.StackTrace}|2");
             }
         }
         try
@@ -511,7 +545,7 @@ public class KerbalPartManagerMod : BaseSpaceWarpPlugin
 
         catch (Exception e)
         {
-            Debug.LogException(e);
+            //Debug.Log($"{e.Message}|{e.InnerException}|{e.Source}|{e.StackTrace}|3");
         }
 
         GUILayout.EndVertical();
