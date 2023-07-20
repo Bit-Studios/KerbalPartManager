@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net472</TargetFramework>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<LangVersion>latest</LangVersion>
+		<ImplicitUsings>true</ImplicitUsings>
+		<RestoreAdditionalProjectSources>
+			https://api.nuget.org/v3/index.json;
+			https://nuget.spacewarp.org/v3/index.json
+		</RestoreAdditionalProjectSources>
+	</PropertyGroup>
+	<ItemGroup>
+		<Reference Include="Assembly-CSharp">
+			<HintPath>..\external_dlls\Assembly-CSharp.dll</HintPath>
+		</Reference>
+		<Reference Include="Assembly-CSharp-firstpass">
+			<HintPath>..\external_dlls\Assembly-CSharp-firstpass.dll</HintPath>
+		</Reference>
+		<Reference Include="Microsoft.CSharp" />
+		<Reference Include="ShadowUtilityLIB">
+			<HintPath>..\external_dlls\ShadowUtilityLIB.dll</HintPath>
+		</Reference>
+		<PackageReference Include="HarmonyX" Version="2.10.1" />
+		<PackageReference Include="UnityEngine.Modules" Version="2020.3.33.1" Publicize="true" />
+		<PackageReference Include="UnityEngine.UITK" Version="2020.3.33.1" Publicize="true" />
+		<PackageReference Include="UitkForKsp2" Version="1.4.0" />
+	</ItemGroup>
+</Project>
