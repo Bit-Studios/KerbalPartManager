@@ -13,17 +13,12 @@ using Logger = ShadowUtilityLIB.logging.Logger;
 using KSP.Modding;
 using HarmonyLib;
 using KSP.UI.Flight;
-using UnityEngine.UI;
 using UnityEngine.UIElements;
 using UitkForKsp2.API;
 using DragManipulator = BetterPartsManager.UI.DragManipulator;
 using ShadowUtilityLIB.UI;
 using Position = UnityEngine.UIElements.Position;
 using Button = UnityEngine.UIElements.Button;
-using System.Runtime.CompilerServices;
-using static System.Net.Mime.MediaTypeNames;
-using System.Collections.Generic;
-using UnityEngine.InputSystem;
 
 namespace BetterPartsManager;
 public class BetterPartsManagerMod : Mod
@@ -303,6 +298,7 @@ public class BetterPartsManagerMod : Mod
 
             Label GeneratedLabel = Element.Label(name, text);
             GeneratedLabel.style.fontSize = fontsizeLabel;
+            GeneratedLabel.style.color = new StyleColor(new Color32(0, 0, 0, 255));
             GeneratedLabel.style.marginTop = gapSize;
             GeneratedLabel.style.paddingTop = gapSize;
             GeneratedLabel.style.paddingBottom = gapSize;
@@ -313,7 +309,8 @@ public class BetterPartsManagerMod : Mod
         VisualElement BetterPartsManagerUI = manager.Get("BetterPartsManager").rootVisualElement.Q<VisualElement>("BetterPartsManagerUI");
         VisualElement BetterPartsManagerUI_Labels = BetterPartsManagerUI.Q<VisualElement>("BetterPartsManagerUI_Labels");
         VisualElement BetterPartsManagerUI_Options = BetterPartsManagerUI.Q<VisualElement>("BetterPartsManagerUI_Options");
-
+        BetterPartsManagerUI_Labels.Clear();
+        BetterPartsManagerUI_Options.Clear();
         if (gameStateConfiguration.IsFlightMode)
         {
             BetterPartsManagerUI.Q<Label>("BetterPartsManagerUI_TitleBar_Title").text = $"{SelectedObject.GetComponent<SimulationObjectView>().Part.GetDisplayName()}";
@@ -329,6 +326,7 @@ public class BetterPartsManagerMod : Mod
         {
             try
             {
+                logger.Log(module.GetModuleDisplayName());
                 switch (module.GetModuleDisplayName())
                 {
                     case "Command Module":
@@ -355,7 +353,203 @@ public class BetterPartsManagerMod : Mod
                         {
                             module_Command.SetControlPoint(NextControlPoint, true);
                         });
+                        BetterPartsManagerUI_Options.Add(BetterPartsManagerUI_Options_ControlOrientation);
                         menuHeight += 15;
+                        break;
+                    case "Lit Part":
+                        break;
+                    case "Light":
+                        Label BetterPartsManagerUI_Labels_Color = GenerateLabel("BetterPartsManagerUI_Labels_Color", "Color");
+                        BetterPartsManagerUI_Labels.Add(BetterPartsManagerUI_Labels_Color);
+                        Data_Light data_Light = new Data_Light();
+                        module.DataModules.TryGetByType<Data_Light>(out data_Light);
+
+                        Slider BetterPartsManagerUI_Options_LightColor_Slider_Red = Element.Slider("BetterPartsManagerUI_Options_LightColor_Slider_Red", 0f, 1f, data_Light.lightColorR.GetValue());
+                        BetterPartsManagerUI_Options_LightColor_Slider_Red.style.height = buttonHeight;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Red.style.fontSize = fontsizeButton;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Red.style.marginTop = gapSize;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Red.dragElement.style.backgroundColor = new StyleColor(new Color32(255, 255, 255, 255));
+                        BetterPartsManagerUI_Options_LightColor_Slider_Red.dragElement.style.marginTop = -2;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Red.dragElement.style.width = 15;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Red.dragElement.style.height = 15;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Red.dragBorderElement.style.backgroundColor = new StyleColor(new Color32(50, 50, 50, 255));
+                        BetterPartsManagerUI_Options_LightColor_Slider_Red.dragBorderElement.style.height = buttonHeight;
+                        menuHeight += 35;
+                        Slider BetterPartsManagerUI_Options_LightColor_Slider_Green = Element.Slider("BetterPartsManagerUI_Options_LightColor_Slider_Green", 0f, 1f, data_Light.lightColorR.GetValue());
+                        BetterPartsManagerUI_Options_LightColor_Slider_Green.style.height = buttonHeight;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Green.style.fontSize = fontsizeButton;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Green.style.marginTop = gapSize;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Green.dragElement.style.backgroundColor = new StyleColor(new Color32(255, 255, 255, 255));
+                        BetterPartsManagerUI_Options_LightColor_Slider_Green.dragElement.style.marginTop = -2;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Green.dragElement.style.width = 15;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Green.dragElement.style.height = 15;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Green.dragBorderElement.style.backgroundColor = new StyleColor(new Color32(50, 50, 50, 255));
+                        BetterPartsManagerUI_Options_LightColor_Slider_Green.dragBorderElement.style.height = buttonHeight;
+                        menuHeight += 35;
+                        Slider BetterPartsManagerUI_Options_LightColor_Slider_Blue = Element.Slider("BetterPartsManagerUI_Options_LightColor_Slider_Blue", 0f, 1f, data_Light.lightColorR.GetValue());
+                        BetterPartsManagerUI_Options_LightColor_Slider_Blue.style.height = buttonHeight;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Blue.style.fontSize = fontsizeButton;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Blue.style.marginTop = gapSize;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Blue.dragElement.style.backgroundColor = new StyleColor(new Color32(255, 255, 255, 255));
+                        BetterPartsManagerUI_Options_LightColor_Slider_Blue.dragElement.style.marginTop = -2;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Blue.dragElement.style.width = 15;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Blue.dragElement.style.height = 15;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Blue.dragBorderElement.style.backgroundColor = new StyleColor(new Color32(50, 50, 50, 255));
+                        BetterPartsManagerUI_Options_LightColor_Slider_Blue.dragBorderElement.style.height = buttonHeight;
+                        menuHeight += 35;
+                        BetterPartsManagerUI_Options_LightColor_Slider_Red.style.backgroundColor = new StyleColor(new Color(BetterPartsManagerUI_Options_LightColor_Slider_Red.value, BetterPartsManagerUI_Options_LightColor_Slider_Green.value, BetterPartsManagerUI_Options_LightColor_Slider_Blue.value));
+                        BetterPartsManagerUI_Options_LightColor_Slider_Green.style.backgroundColor = new StyleColor(new Color(BetterPartsManagerUI_Options_LightColor_Slider_Red.value, BetterPartsManagerUI_Options_LightColor_Slider_Green.value, BetterPartsManagerUI_Options_LightColor_Slider_Blue.value));
+                        BetterPartsManagerUI_Options_LightColor_Slider_Blue.style.backgroundColor = new StyleColor(new Color(BetterPartsManagerUI_Options_LightColor_Slider_Red.value, BetterPartsManagerUI_Options_LightColor_Slider_Green.value, BetterPartsManagerUI_Options_LightColor_Slider_Blue.value));
+
+                        BetterPartsManagerUI_Options_LightColor_Slider_Red.dragContainer.style.backgroundColor = new StyleColor(new Color(BetterPartsManagerUI_Options_LightColor_Slider_Red.value, BetterPartsManagerUI_Options_LightColor_Slider_Green.value, BetterPartsManagerUI_Options_LightColor_Slider_Blue.value));
+                        BetterPartsManagerUI_Options_LightColor_Slider_Green.dragContainer.style.backgroundColor = new StyleColor(new Color(BetterPartsManagerUI_Options_LightColor_Slider_Red.value, BetterPartsManagerUI_Options_LightColor_Slider_Green.value, BetterPartsManagerUI_Options_LightColor_Slider_Blue.value));
+                        BetterPartsManagerUI_Options_LightColor_Slider_Blue.dragContainer.style.backgroundColor = new StyleColor(new Color(BetterPartsManagerUI_Options_LightColor_Slider_Red.value, BetterPartsManagerUI_Options_LightColor_Slider_Green.value, BetterPartsManagerUI_Options_LightColor_Slider_Blue.value));
+
+                        BetterPartsManagerUI_Options_LightColor_Slider_Red.RegisterValueChangedCallback((evt) =>
+                        {
+                            UpdateColor();
+                        });
+                        BetterPartsManagerUI_Options_LightColor_Slider_Green.RegisterValueChangedCallback((evt) =>
+                        {
+                            UpdateColor();
+                        });
+                        BetterPartsManagerUI_Options_LightColor_Slider_Blue.RegisterValueChangedCallback((evt) =>
+                        {
+                            UpdateColor();
+                        });
+
+                        void UpdateColor()
+                        {
+                            
+                            BetterPartsManagerUI_Options_LightColor_Slider_Red.style.backgroundColor = new StyleColor(new Color(BetterPartsManagerUI_Options_LightColor_Slider_Red.value, BetterPartsManagerUI_Options_LightColor_Slider_Green.value, BetterPartsManagerUI_Options_LightColor_Slider_Blue.value));
+                            BetterPartsManagerUI_Options_LightColor_Slider_Green.style.backgroundColor = new StyleColor(new Color(BetterPartsManagerUI_Options_LightColor_Slider_Red.value, BetterPartsManagerUI_Options_LightColor_Slider_Green.value, BetterPartsManagerUI_Options_LightColor_Slider_Blue.value));
+                            BetterPartsManagerUI_Options_LightColor_Slider_Blue.style.backgroundColor = new StyleColor(new Color(BetterPartsManagerUI_Options_LightColor_Slider_Red.value, BetterPartsManagerUI_Options_LightColor_Slider_Green.value, BetterPartsManagerUI_Options_LightColor_Slider_Blue.value));
+
+                            BetterPartsManagerUI_Options_LightColor_Slider_Red.dragContainer.style.backgroundColor = new StyleColor(new Color(BetterPartsManagerUI_Options_LightColor_Slider_Red.value, BetterPartsManagerUI_Options_LightColor_Slider_Green.value, BetterPartsManagerUI_Options_LightColor_Slider_Blue.value));
+                            BetterPartsManagerUI_Options_LightColor_Slider_Green.dragContainer.style.backgroundColor = new StyleColor(new Color(BetterPartsManagerUI_Options_LightColor_Slider_Red.value, BetterPartsManagerUI_Options_LightColor_Slider_Green.value, BetterPartsManagerUI_Options_LightColor_Slider_Blue.value));
+                            BetterPartsManagerUI_Options_LightColor_Slider_Blue.dragContainer.style.backgroundColor = new StyleColor(new Color(BetterPartsManagerUI_Options_LightColor_Slider_Red.value, BetterPartsManagerUI_Options_LightColor_Slider_Green.value, BetterPartsManagerUI_Options_LightColor_Slider_Blue.value));
+
+                            data_Light.lightColorR.SetValue(BetterPartsManagerUI_Options_LightColor_Slider_Red.value);
+                            data_Light.lightColorG.SetValue(BetterPartsManagerUI_Options_LightColor_Slider_Green.value);
+                            data_Light.lightColorB.SetValue(BetterPartsManagerUI_Options_LightColor_Slider_Blue.value);
+                        }
+                        BetterPartsManagerUI_Options.Add(BetterPartsManagerUI_Options_LightColor_Slider_Red);
+                        BetterPartsManagerUI_Options.Add(BetterPartsManagerUI_Options_LightColor_Slider_Green);
+                        BetterPartsManagerUI_Options.Add(BetterPartsManagerUI_Options_LightColor_Slider_Blue);
+
+                        Label BetterPartsManagerUI_Labels_blinkRate = GenerateLabel("BetterPartsManagerUI_Labels_blinkRate", "blink Rate");
+                        BetterPartsManagerUI_Labels.Add(BetterPartsManagerUI_Labels_blinkRate);
+                        BetterPartsManagerUI_Labels_blinkRate.style.marginTop = gapSize + 80;
+
+                        Slider BetterPartsManagerUI_Options_LightBlinkRate = Element.Slider("BetterPartsManagerUI_Options_LightBlinkRate", 0f, 100f, data_Light.blinkRate.GetValue());
+                        BetterPartsManagerUI_Options_LightBlinkRate.style.height = buttonHeight;
+                        BetterPartsManagerUI_Options_LightBlinkRate.style.fontSize = fontsizeButton;
+                        BetterPartsManagerUI_Options_LightBlinkRate.style.marginTop = gapSize;
+                        BetterPartsManagerUI_Options_LightBlinkRate.dragElement.style.marginTop = -2;
+                        BetterPartsManagerUI_Options_LightBlinkRate.dragElement.style.width = 15;
+                        BetterPartsManagerUI_Options_LightBlinkRate.dragElement.style.height = 15;
+                        BetterPartsManagerUI_Options_LightBlinkRate.dragBorderElement.style.height = buttonHeight;
+                        BetterPartsManagerUI_Options_LightBlinkRate.RegisterValueChangedCallback((evt) =>
+                        {
+                            data_Light.blinkRate.SetValue(BetterPartsManagerUI_Options_LightBlinkRate.value);
+                        });
+                        BetterPartsManagerUI_Options.Add(BetterPartsManagerUI_Options_LightBlinkRate);
+                        menuHeight += 35;
+                        if (data_Light.canRotate)
+                        {
+                            Label BetterPartsManagerUI_Labels_rotationAngle = GenerateLabel("BetterPartsManagerUI_Labels_rotationAngle", "rotation Angle");
+                            BetterPartsManagerUI_Labels.Add(BetterPartsManagerUI_Labels_rotationAngle);
+                            BetterPartsManagerUI_Labels_rotationAngle.style.marginTop = gapSize;
+
+                            Slider BetterPartsManagerUI_Options_LightrotationAngle = Element.Slider("BetterPartsManagerUI_Options_LightrotationAngle", 0f, 360f, data_Light.rotationAngle.GetValue());
+                            BetterPartsManagerUI_Options_LightrotationAngle.style.height = buttonHeight;
+                            BetterPartsManagerUI_Options_LightrotationAngle.style.fontSize = fontsizeButton;
+                            BetterPartsManagerUI_Options_LightrotationAngle.style.marginTop = gapSize;
+                            BetterPartsManagerUI_Options_LightrotationAngle.dragElement.style.marginTop = -2;
+                            BetterPartsManagerUI_Options_LightrotationAngle.dragElement.style.width = 15;
+                            BetterPartsManagerUI_Options_LightrotationAngle.dragElement.style.height = 15;
+                            BetterPartsManagerUI_Options_LightrotationAngle.dragBorderElement.style.height = buttonHeight;
+                            BetterPartsManagerUI_Options_LightrotationAngle.RegisterValueChangedCallback((evt) =>
+                            {
+                                data_Light.rotationAngle.SetValue(BetterPartsManagerUI_Options_LightrotationAngle.value);
+                            });
+                            BetterPartsManagerUI_Options.Add(BetterPartsManagerUI_Options_LightrotationAngle);
+                            menuHeight += 25;
+                        }
+                        if (data_Light.canPitch)
+                        {
+                            Label BetterPartsManagerUI_Labels_pitchAngle = GenerateLabel("BetterPartsManagerUI_Labels_pitchAngle", "pitch Angle");
+                            BetterPartsManagerUI_Labels.Add(BetterPartsManagerUI_Labels_pitchAngle);
+                            BetterPartsManagerUI_Labels_pitchAngle.style.marginTop = gapSize;
+
+                            Slider BetterPartsManagerUI_Options_LightpitchAngle = Element.Slider("BetterPartsManagerUI_Options_LightpitchAngle", 0f, 360f, data_Light.pitchAngle.GetValue());
+                            BetterPartsManagerUI_Options_LightpitchAngle.style.height = buttonHeight;
+                            BetterPartsManagerUI_Options_LightpitchAngle.style.fontSize = fontsizeButton;
+                            BetterPartsManagerUI_Options_LightpitchAngle.style.marginTop = gapSize;
+                            BetterPartsManagerUI_Options_LightpitchAngle.dragElement.style.marginTop = -2;
+                            BetterPartsManagerUI_Options_LightpitchAngle.dragElement.style.width = 15;
+                            BetterPartsManagerUI_Options_LightpitchAngle.dragElement.style.height = 15;
+                            BetterPartsManagerUI_Options_LightpitchAngle.dragBorderElement.style.height = buttonHeight;
+                            BetterPartsManagerUI_Options_LightpitchAngle.RegisterValueChangedCallback((evt) =>
+                            {
+                                data_Light.pitchAngle.SetValue(BetterPartsManagerUI_Options_LightpitchAngle.value);
+                            });
+                            BetterPartsManagerUI_Options.Add(BetterPartsManagerUI_Options_LightpitchAngle);
+                        }
+                        break;
+                    case "Reaction Wheel":
+                        Data_ReactionWheel data_ReactionWheel = new Data_ReactionWheel();
+                        module.DataModules.TryGetByType<Data_ReactionWheel>(out data_ReactionWheel);
+
+                        Label BetterPartsManagerUI_Labels_WheelActuatorMode = GenerateLabel("BetterPartsManagerUI_Labels_WheelActuatorMode", "Torque Mode");
+                        BetterPartsManagerUI_Labels.Add(BetterPartsManagerUI_Labels_WheelActuatorMode);
+                        BetterPartsManagerUI_Labels_WheelActuatorMode.style.marginTop = gapSize;
+
+                        var modeLst = Enum.GetNames(typeof(Data_ReactionWheel.ActuatorModes));
+
+                        var currentModeInx = Array.IndexOf(modeLst, data_ReactionWheel.WheelActuatorMode.GetValue());
+
+                        if (modeLst.Length == currentModeInx)
+                        {
+                            currentModeInx = 0;
+                        }
+                        else
+                        {
+                            currentModeInx++;
+                        }
+                        Button BetterPartsManagerUI_Options_WheelActuatorMode = GenerateButton("BetterPartsManagerUI_Options_WheelActuatorMode", modeLst[currentModeInx]);
+                        BetterPartsManagerUI_Options_WheelActuatorMode.clickable = new Clickable(() =>
+                        {
+                            BetterPartsManagerUI_Options_WheelActuatorMode.text = modeLst[currentModeInx];
+                            data_ReactionWheel.WheelActuatorMode.SetValue((Data_ReactionWheel.ActuatorModes)Enum.Parse(typeof(Data_ReactionWheel.ActuatorModes), modeLst[currentModeInx]));
+                        });
+                        BetterPartsManagerUI_Options.Add(BetterPartsManagerUI_Options_WheelActuatorMode);
+                        menuHeight += 25;
+                        try
+                        {
+                            Label BetterPartsManagerUI_Labels_WheelAuthority = GenerateLabel("BetterPartsManagerUI_Labels_WheelAuthority", "Wheel Authority");
+                            BetterPartsManagerUI_Labels.Add(BetterPartsManagerUI_Labels_WheelAuthority);
+                            BetterPartsManagerUI_Labels_WheelActuatorMode.style.marginTop = gapSize;
+                            Slider BetterPartsManagerUI_Options_WheelAuthority = Element.Slider("BetterPartsManagerUI_Options_LightColor_Slider_Red", 0f, 1f, (float)data_ReactionWheel.WheelAuthority.GetObject());
+                            BetterPartsManagerUI_Options_WheelAuthority.style.height = buttonHeight;
+                            BetterPartsManagerUI_Options_WheelAuthority.style.fontSize = fontsizeButton;
+                            BetterPartsManagerUI_Options_WheelAuthority.style.marginTop = gapSize;
+                            BetterPartsManagerUI_Options_WheelAuthority.dragElement.style.backgroundColor = new StyleColor(new Color32(255, 255, 255, 255));
+                            BetterPartsManagerUI_Options_WheelAuthority.dragElement.style.marginTop = -2;
+                            BetterPartsManagerUI_Options_WheelAuthority.dragElement.style.width = 15;
+                            BetterPartsManagerUI_Options_WheelAuthority.dragElement.style.height = 15;
+                            BetterPartsManagerUI_Options_WheelAuthority.dragBorderElement.style.backgroundColor = new StyleColor(new Color32(0, 0, 0, 0));
+                            BetterPartsManagerUI_Options_WheelAuthority.dragBorderElement.style.height = buttonHeight;
+                            
+                            BetterPartsManagerUI_Options_WheelAuthority.RegisterValueChangedCallback((evt) =>
+                            {
+                                data_ReactionWheel.WheelAuthority.SetValue(BetterPartsManagerUI_Options_WheelAuthority.value);
+                            });
+                            menuHeight += 35;
+                            BetterPartsManagerUI_Options.Add(BetterPartsManagerUI_Options_WheelAuthority);
+                        }
+                        catch{}
+
                         break;
                     default: break;
                 }
