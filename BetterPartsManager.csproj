@@ -11,6 +11,9 @@
 		</RestoreAdditionalProjectSources>
 	</PropertyGroup>
 	<ItemGroup>
+	  <None Include="src\KerbalPartManagerMod.cs" />
+	</ItemGroup>
+	<ItemGroup>
 		<Reference Include="Assembly-CSharp">
 			<HintPath>..\external_dlls\Assembly-CSharp.dll</HintPath>
 		</Reference>
