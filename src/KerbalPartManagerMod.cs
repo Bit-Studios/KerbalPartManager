@@ -1,15 +1,11 @@
-﻿using UnityEngine;
-using KSP.Game;
-using KSP.Sim.impl;
-using KSP.OAB;
+﻿using KSP.Game;
 using KSP.Messages;
-using KSP.Modding;
 using HarmonyLib;
-using System.Reflection;
-using KSP.Modules;
+using BepInEx;
 
 namespace BetterPartsManager;
-public class BetterPartsManagerMod : Mod
+[BepInPlugin("computer.shadow.mods.bpm", "BetterPartsManager", "2.0.0")]
+public class BetterPartsManagerMod : BaseUnityPlugin
 {
     public static string ModId = "BetterPartsManager";
     public static bool IsDev = true;
@@ -17,8 +13,8 @@ public class BetterPartsManagerMod : Mod
     public static bool AllowUpdate = true;
     void Awake()
     {
+        Harmony.CreateAndPatchAll(typeof(LegacyMode));
         GameManager.Instance.Game.Messages.Subscribe<GameStateChangedMessage>(GameStateChanged);
-        Harmony.CreateAndPatchAll(typeof(BetterPartsManagerMod));
     }
     void GameStateChanged(MessageCenterMessage messageCenterMessage)
     {
@@ -28,6 +24,9 @@ public class BetterPartsManagerMod : Mod
         GameManager.Instance.Game.PartsManager.IsVisible = false;
         //AllowUpdate = true;
     }
+}
+public class LegacyMode
+{
     [HarmonyPatch(typeof(PartsManagerPartsList))]
     [HarmonyPatch("MarkDirty")]
     [HarmonyPrefix]
@@ -45,11 +44,11 @@ public class BetterPartsManagerMod : Mod
         //{
         //    logger.Log($"{ex}");
         //}
-        if (AllowUpdate)
+        if (BetterPartsManagerMod.AllowUpdate)
         {
-            AllowUpdate = false;
+            BetterPartsManagerMod.AllowUpdate = false;
             return true;
         }
-        return AllowUpdate;
+        return BetterPartsManagerMod.AllowUpdate;
     }
 }
